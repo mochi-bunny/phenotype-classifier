@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.env
+*.onnx
+*.pth
+*.trt
+models/
+data/
+venv/
+.venv/
+*.zip
+.DS_Store
+sweep_results.json

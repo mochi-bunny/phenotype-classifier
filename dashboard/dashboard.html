@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CropAI - Agricultural Intelligence Platform</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              400: '#4ade80',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              900: '#14532d',
+              950: '#052e16',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts & FontAwesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <!-- Chart.js for Data Visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Alpine.js for lightweight reactivity -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    [x-cloak] { display: none !important; }
+    
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .glow-green {
+      box-shadow: 0 0 25px -5px rgba(34, 197, 94, 0.25);
+    }
+    .glow-amber {
+      box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.25);
+    }
+    .glow-red {
+      box-shadow: 0 0 25px -5px rgba(239, 68, 68, 0.25);
+    }
+  </style>
+</head>
+<body class="h-full font-sans antialiased bg-slate-950 text-slate-100 flex flex-col overflow-x-hidden" x-data="cropDashboard()">
+
+  <!-- Header Navigation -->
+  <header class="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
+    <div class="px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-brand-500/20">
+          <i class="fa-solid fa-seedling text-xl"></i>
+        </div>
+        <div>
+          <span class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            CropAI <span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 font-mono font-medium">Nebius Studio Llama-3.1</span>
+          </span>
+          <p class="text-xs text-slate-400 hidden sm:block">Precision Agriculture Computer Vision & Trait Diagnostics</p>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Summary Bar -->
+      <div class="hidden lg:flex items-center gap-6 text-xs">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800">
+          <i class="fa-solid fa-microscope text-brand-400"></i>
+          <span class="text-slate-400">Total Scans:</span>
+          <span class="font-semibold text-white" x-text="scansToday">152</span>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800">
+          <i class="fa-solid fa-chart-line text-emerald-400"></i>
+          <span class="text-slate-400">Avg Phenotype Index:</span>
+          <span class="font-semibold text-emerald-400" x-text="avgScore">0.82</span>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800">
+          <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+          <span class="text-slate-400">Pathology Alerts:</span>
+          <span class="font-semibold text-amber-400" x-text="activeAlerts">4</span>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800">
+          <i class="fa-solid fa-circle-check text-brand-400"></i>
+          <span class="text-slate-400">Selection Match Rate:</span>
+          <span class="font-semibold text-brand-400">76%</span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-3">
+        <button @click="resetForm()" class="px-3 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg transition border border-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-rotate-left"></i>
+          <span class="hidden sm:inline">Reset Payload</span>
+        </button>
+        <div class="h-6 w-px bg-slate-800 hidden sm:block"></div>
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs text-brand-400 font-bold">
+            AG
+          </div>
+          <span class="text-xs font-medium text-slate-300 hidden md:inline">Agronomist Session</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+
+    <!-- Mode Selector Tabs -->
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div class="flex items-center gap-2 p-1 bg-slate-900/90 rounded-xl border border-slate-800">
+        <button 
+          @click="switchTab('phenotype')" 
+          :class="activeTab === 'phenotype' ? 'bg-brand-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'"
+          class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-dna"></i>
+          <span>Crop Phenotype Analyzer & Trait Selection</span>
+        </button>
+        <button 
+          @click="switchTab('pathology')" 
+          :class="activeTab === 'pathology' ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'"
+          class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-bug"></i>
+          <span>Plant Pathology & Disease Diagnostics</span>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 text-xs text-slate-400">
+        <i class="fa-solid fa-network-wired text-brand-400"></i>
+        <span>FastAPI Backend Status: <strong class="text-emerald-400">Connected</strong></span>
+      </div>
+    </div>
+
+    <!-- Dual Pane Workspace -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+      <!-- LEFT PANE: Imagery, Telemetry & Preference Filtering (5 Cols) -->
+      <div class="lg:col-span-5 space-y-6">
+        
+        <!-- Image Dropzone Card -->
+        <div class="glass-panel rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-image text-brand-400"></i>
+              Crop Imagery Input
+            </h2>
+            <span class="text-[11px] text-slate-400">High-Res Canopy / Foliage</span>
+          </div>
+
+          <!-- Dropzone -->
+          <div 
+            @dragover.prevent="isDragging = true"
+            @dragleave.prevent="isDragging = false"
+            @drop.prevent="handleDrop($event)"
+            :class="isDragging ? 'border-brand-500 bg-brand-500/10' : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'"
+            class="relative border-2 border-dashed rounded-xl p-4 text-center transition cursor-pointer group flex flex-col items-center justify-center min-h-[190px]">
+            
+            <input type="file" id="fileInput" class="hidden" accept="image/*" @change="handleFileSelect($event)" />
+
+            <template x-if="!selectedImage">
+              <div @click="document.getElementById('fileInput').click()" class="space-y-3 w-full">
+                <div class="w-12 h-12 rounded-full bg-slate-800 group-hover:bg-slate-700 flex items-center justify-center mx-auto text-brand-400 transition">
+                  <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                </div>
+                <div>
+                  <p class="text-xs font-semibold text-slate-200">Click to upload or drag crop photo</p>
+                  <p class="text-[11px] text-slate-500 mt-1">Supports JPG, PNG or drone canopy frame</p>
+                </div>
+              </div>
+            </template>
+
+            <template x-if="selectedImage">
+              <div class="relative w-full h-48 rounded-lg overflow-hidden group/img">
+                <img :src="selectedImage" class="w-full h-full object-cover rounded-lg" alt="Crop Specimen" />
+                <div class="absolute inset-0 bg-slate-950/70 opacity-0 group-hover/img:opacity-100 transition flex items-center justify-center gap-2">
+                  <button @click="document.getElementById('fileInput').click()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-white hover:bg-slate-700 text-xs">
+                    <i class="fa-solid fa-pen"></i> Replace
+                  </button>
+                  <button @click="selectedImage = null" class="px-3 py-1.5 rounded-lg bg-red-600/80 text-white hover:bg-red-600 text-xs">
+                    <i class="fa-solid fa-trash"></i> Remove
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Sample Crop Dataset Presets -->
+          <div class="space-y-2">
+            <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider block">Or select sample crop specimen:</span>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <template x-for="(sample, idx) in samplePresets" :key="idx">
+                <button 
+                  @click="loadSample(sample)"
+                  :class="selectedImage === sample.url ? 'ring-2 ring-brand-500 border-transparent bg-slate-800' : 'border-slate-800 hover:border-slate-700 bg-slate-900/80'"
+                  class="p-2 rounded-lg border text-left transition flex flex-col gap-1 text-[11px] hover:bg-slate-800">
+                  <span class="font-semibold text-slate-200 truncate" x-text="sample.name"></span>
+                  <span class="text-[10px] text-slate-400 truncate" x-text="sample.tag"></span>
+                </button>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- Environmental & GPS Telemetry Metadata -->
+        <div class="glass-panel rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-satellite-dish text-brand-400"></i>
+              Telemetry Sensor JSON Metadata
+            </h2>
+            <span class="text-[11px] text-slate-400 font-mono">Field Context</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="block text-slate-400 mb-1">Target Plot ID</label>
+              <input type="text" x-model="telemetry.target_id" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-brand-500 font-mono text-xs" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">NDVI Score (0 - 1)</label>
+              <input type="number" step="0.01" min="0" max="1" x-model.number="telemetry.ndvi_score" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-brand-500 font-mono text-xs" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">GPS Longitude</label>
+              <input type="number" step="0.0001" x-model.number="telemetry.gps_lon" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-brand-500 font-mono text-xs" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">GPS Latitude</label>
+              <input type="number" step="0.0001" x-model.number="telemetry.gps_lat" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-brand-500 font-mono text-xs" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">Temp Delta (°C)</label>
+              <input type="number" step="0.1" x-model.number="telemetry.temperature_delta_c" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-brand-500 font-mono text-xs" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">Soil Moisture (Vol %)</label>
+              <input type="number" step="0.01" min="0" max="1" x-model.number="telemetry.soil_moisture_volumetric" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-brand-500 font-mono text-xs" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Desirable Trait Preference Filtering (Phenotype Mode Only) -->
+        <div x-show="activeTab === 'phenotype'" class="glass-panel rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-sliders text-brand-400"></i>
+              Desirable Trait Thresholds
+            </h2>
+            <span class="text-xs text-brand-400">Matching Criteria</span>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <div>
+              <div class="flex justify-between text-slate-300 mb-1">
+                <span>Min Erect Leaf Angle Score</span>
+                <span class="font-mono text-brand-400" x-text="preferences.min_leaf_angle.toFixed(2)"></span>
+              </div>
+              <input type="range" min="0" max="1" step="0.05" x-model.number="preferences.min_leaf_angle" class="w-full accent-brand-500 bg-slate-800 rounded-lg h-1.5" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-slate-300 mb-1">
+                <span>Min Stalk Strength Score</span>
+                <span class="font-mono text-brand-400" x-text="preferences.min_stalk_strength.toFixed(2)"></span>
+              </div>
+              <input type="range" min="0" max="1" step="0.05" x-model.number="preferences.min_stalk_strength" class="w-full accent-brand-500 bg-slate-800 rounded-lg h-1.5" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-slate-300 mb-1">
+                <span>Min Pest Deterrence Score</span>
+                <span class="font-mono text-brand-400" x-text="preferences.min_pest_deterrence.toFixed(2)"></span>
+              </div>
+              <input type="range" min="0" max="1" step="0.05" x-model.number="preferences.min_pest_deterrence" class="w-full accent-brand-500 bg-slate-800 rounded-lg h-1.5" />
+            </div>
+
+            <div class="pt-2 flex items-center justify-between border-t border-slate-800">
+              <span class="text-slate-400">Target Variety Classification</span>
+              <select x-model="preferences.target_classification" class="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-brand-300 focus:outline-none">
+                <option value="Genetically Desirable">Genetically Desirable</option>
+                <option value="Standard">Standard</option>
+                <option value="Suboptimal">Suboptimal</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Endpoint Button -->
+        <button 
+          @click="runEvaluation()" 
+          :disabled="isAnalyzing"
+          class="w-full py-3.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider text-slate-950 bg-gradient-to-r from-brand-400 via-emerald-400 to-teal-400 hover:from-brand-300 hover:to-teal-300 shadow-lg shadow-brand-500/20 transition flex items-center justify-center gap-2 disabled:opacity-50">
+          <template x-if="!isAnalyzing">
+            <span class="flex items-center gap-2">
+              <i class="fa-solid fa-bolt text-sm"></i>
+              <span x-text="activeTab === 'phenotype' ? 'Run Phenotypic Evaluation Endpoint' : 'Run Pathology Diagnostic Endpoint'"></span>
+            </span>
+          </template>
+          <template x-if="isAnalyzing">
+            <span class="flex items-center gap-2">
+              <i class="fa-solid fa-spinner fa-spin text-sm"></i>
+              <span>Executing AI Multimodal Vision Request...</span>
+            </span>
+          </template>
+        </button>
+
+      </div>
+
+      <!-- RIGHT PANE: Output Analytics & Metrics (7 Cols) -->
+      <div class="lg:col-span-7 space-y-6">
+
+        <!-- Uninitialized State -->
+        <div x-show="!currentEvaluation" class="glass-panel rounded-2xl p-12 text-center space-y-4 flex flex-col items-center justify-center min-h-[500px]">
+          <div class="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600 text-2xl">
+            <i class="fa-solid fa-chart-pie"></i>
+          </div>
+          <div class="max-w-md">
+            <h3 class="text-base font-bold text-white">No Diagnostic Scan Loaded</h3>
+            <p class="text-xs text-slate-400 mt-1">
+              Select or upload a crop specimen image, adjust telemetry metadata, and execute inference to view score gauges and diagnostics.
+            </p>
+          </div>
+        </div>
+
+        <!-- RESULTS ANALYTICS DISPLAY -->
+        <div x-show="currentEvaluation" x-cloak class="space-y-6">
+
+          <!-- MODE A: Phenotype Evaluation Mode -->
+          <template x-if="activeTab === 'phenotype' && currentEvaluation">
+            <div class="space-y-6">
+
+              <!-- Executive Phenotype Card -->
+              <div class="glass-panel rounded-2xl p-6 relative overflow-hidden" 
+                   :class="currentEvaluation.preference_approved ? 'border-brand-500/40 glow-green' : 'border-amber-500/40 glow-amber'">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-mono text-slate-400" x-text="'Target ID: ' + currentEvaluation.target_id"></span>
+                      <span 
+                        :class="{
+                          'bg-emerald-500/20 text-emerald-300 border-emerald-500/30': currentEvaluation.classification === 'Genetically Desirable',
+                          'bg-blue-500/20 text-blue-300 border-blue-500/30': currentEvaluation.classification === 'Standard',
+                          'bg-amber-500/20 text-amber-300 border-amber-500/30': currentEvaluation.classification === 'Suboptimal'
+                        }"
+                        class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border"
+                        x-text="currentEvaluation.classification">
+                      </span>
+                    </div>
+                    <h3 class="text-xl font-extrabold text-white tracking-tight">Phenotypic Traits Evaluation</h3>
+                    <p class="text-xs text-slate-300" x-text="currentEvaluation.recommended_action"></p>
+                  </div>
+
+                  <!-- Score Ring / Meter -->
+                  <div class="flex items-center gap-4 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                    <div class="text-right">
+                      <span class="text-[10px] uppercase text-slate-400 block tracking-wider">Phenotypic Index</span>
+                      <span class="text-2xl font-black text-brand-400 font-mono" x-text="currentEvaluation.overall_phenotypic_score.toFixed(2)"></span>
+                      <span class="text-[10px] text-slate-500 block">out of 1.00</span>
+                    </div>
+                    <div class="h-10 w-px bg-slate-800"></div>
+                    <div>
+                      <span class="text-[10px] uppercase text-slate-400 block tracking-wider">Queue Priority</span>
+                      <span 
+                        :class="{
+                          'text-red-400': currentEvaluation.collector_queue_priority === 'High',
+                          'text-amber-400': currentEvaluation.collector_queue_priority === 'Medium',
+                          'text-emerald-400': currentEvaluation.collector_queue_priority === 'Low'
+                        }"
+                        class="text-sm font-bold flex items-center gap-1.5"
+                        x-text="currentEvaluation.collector_queue_priority">
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Trait Preference Pass/Fail Status Pill -->
+                <div class="mt-4 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                  <div class="flex items-center gap-2">
+                    <span class="text-slate-400">Target Trait Criteria Match:</span>
+                    <template x-if="currentEvaluation.preference_approved">
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30">
+                        <i class="fa-solid fa-circle-check"></i> Approved Candidate
+                      </span>
+                    </template>
+                    <template x-if="!currentEvaluation.preference_approved">
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Below Threshold Criteria
+                      </span>
+                    </template>
+                  </div>
+                  <span class="text-slate-500 font-mono">Evaluated via Llama-3.1 Vision API</span>
+                </div>
+              </div>
+
+              <!-- Radar/Bar Chart Section -->
+              <div class="glass-panel rounded-2xl p-5 space-y-4">
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Radar Trait Score Visualizer</h4>
+                <div class="h-60 w-full relative flex items-center justify-center">
+                  <canvas id="phenotypeRadarChart"></canvas>
+                </div>
+              </div>
+
+              <!-- 6 Judging Categories Accordions -->
+              <div class="glass-panel rounded-2xl p-5 space-y-4">
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
+                  <span>6 Official Phenotype Judging Categories</span>
+                  <span class="text-slate-500 font-normal">Sub-trait scores</span>
+                </h4>
+
+                <div class="space-y-3">
+                  <!-- Cat 1 -->
+                  <div class="bg-slate-900/60 rounded-xl border border-slate-800 p-4 space-y-3">
+                    <div class="flex justify-between items-center text-xs font-semibold text-slate-200">
+                      <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-leaf text-brand-400"></i> 1. Plant Architecture & Morphology
+                      </span>
+                      <span class="text-slate-400 text-[11px]" x-text="'Branching: ' + currentEvaluation.categories.arch.branching_habit"></span>
+                    </div>
+                    <div class="space-y-2">
+                      <div>
+                        <div class="flex justify-between text-[11px] mb-1">
+                          <span class="text-slate-400">Erect Leaf Angle Score</span>
+                          <span class="font-mono text-brand-300" x-text="currentEvaluation.categories.arch.erect_leaf_angle_score.toFixed(2)"></span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                          <div class="bg-brand-500 h-full rounded-full transition-all duration-500" :style="`width: ${currentEvaluation.categories.arch.erect_leaf_angle_score * 100}%`"></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div class="flex justify-between text-[11px] mb-1">
+                          <span class="text-slate-400">Stalk Strength & Diameter</span>
+                          <span class="font-mono text-brand-300" x-text="currentEvaluation.categories.arch.stalk_strength_and_diameter_score.toFixed(2)"></span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                          <div class="bg-brand-500 h-full rounded-full transition-all duration-500" :style="`width: ${currentEvaluation.categories.arch.stalk_strength_and_diameter_score * 100}%`"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Cat 2 -->
+                  <div class="bg-slate-900/60 rounded-xl border border-slate-800 p-4 space-y-3">
+                    <div class="flex justify-between items-center text-xs font-semibold text-slate-200">
+                      <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-wheat-awn text-emerald-400"></i> 2. Yield & Reproductive Traits
+                      </span>
+                      <span class="text-slate-400 text-[11px]" x-text="'Kernel Density: ' + currentEvaluation.categories.yield.kernel_fruit_density_count"></span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                      <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-[11px] text-slate-400 block mb-1">Harvest Index Est.</span>
+                        <span class="text-lg font-bold font-mono text-white" x-text="currentEvaluation.categories.yield.harvest_index_estimate.toFixed(2)"></span>
+                      </div>
+                      <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-[11px] text-slate-400 block mb-1">Fertility Efficiency</span>
+                        <span class="text-lg font-bold font-mono text-white" x-text="currentEvaluation.categories.yield.fertility_efficiency_score.toFixed(2)"></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Cat 3 & 4 -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="bg-slate-900/60 rounded-xl border border-slate-800 p-3.5 space-y-2">
+                      <span class="text-xs font-semibold text-slate-200 block mb-2">3. Biotic Stress Resistance</span>
+                      <div class="flex justify-between text-[11px]">
+                        <span class="text-slate-400">Pest Deterrence</span>
+                        <span class="font-mono text-emerald-400" x-text="currentEvaluation.categories.biotic.pest_deterrence_score.toFixed(2)"></span>
+                      </div>
+                      <div class="flex justify-between text-[11px]">
+                        <span class="text-slate-400">Necrotic Threshold</span>
+                        <span class="font-mono text-slate-300" x-text="currentEvaluation.categories.biotic.necrotic_chlorotic_threshold_score.toFixed(2)"></span>
+                      </div>
+                    </div>
+
+                    <div class="bg-slate-900/60 rounded-xl border border-slate-800 p-3.5 space-y-2">
+                      <span class="text-xs font-semibold text-slate-200 block mb-2">4. Abiotic Resilience</span>
+                      <div class="flex justify-between text-[11px]">
+                        <span class="text-slate-400">Stomatal Regulation</span>
+                        <span class="font-mono text-teal-400" x-text="currentEvaluation.categories.abiotic.stomatal_regulation_leaf_rolling_score.toFixed(2)"></span>
+                      </div>
+                      <div class="flex justify-between text-[11px]">
+                        <span class="text-slate-400">Stay-Green Active</span>
+                        <span class="font-semibold" :class="currentEvaluation.categories.abiotic.stay_green_trait_active ? 'text-emerald-400' : 'text-slate-500'" x-text="currentEvaluation.categories.abiotic.stay_green_trait_active ? 'Active' : 'Inactive'"></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Cat 5 & 6 -->
+                  <div class="bg-slate-900/60 rounded-xl border border-slate-800 p-4 space-y-2">
+                    <span class="text-xs font-semibold text-slate-200 block">5 & 6. Quality, Phenology & Processing</span>
+                    <div class="grid grid-cols-3 gap-2 text-[11px] pt-1">
+                      <div class="bg-slate-950 p-2 rounded border border-slate-800">
+                        <span class="text-slate-500 block">Synchronous Flowering</span>
+                        <span class="font-mono font-bold text-slate-200" x-text="currentEvaluation.categories.quality.synchronous_flowering_ripening_score.toFixed(2)"></span>
+                      </div>
+                      <div class="bg-slate-950 p-2 rounded border border-slate-800">
+                        <span class="text-slate-500 block">Non-Shattering Pods</span>
+                        <span class="font-mono font-bold text-slate-200" x-text="currentEvaluation.categories.harvest.non_shattering_seed_pods_score.toFixed(2)"></span>
+                      </div>
+                      <div class="bg-slate-950 p-2 rounded border border-slate-800">
+                        <span class="text-slate-500 block">Detachment Force</span>
+                        <span class="font-mono font-bold text-slate-200" x-text="currentEvaluation.categories.harvest.detachment_force_score.toFixed(2)"></span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+          </template>
+
+          <!-- MODE B: Plant Pathology Diagnostics Mode -->
+          <template x-if="activeTab === 'pathology' && currentEvaluation">
+            <div class="space-y-6">
+
+              <!-- Pathology Status Banner -->
+              <div class="glass-panel rounded-2xl p-6 relative overflow-hidden"
+                :class="{
+                  'border-emerald-500/40 glow-green': currentEvaluation.pathology_status === 'Healthy',
+                  'border-amber-500/40 glow-amber': currentEvaluation.pathology_status === 'Suspect',
+                  'border-red-500/40 glow-red': currentEvaluation.pathology_status === 'Infected'
+                }">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-mono text-slate-400" x-text="'Target ID: ' + currentEvaluation.target_id"></span>
+                      <span 
+                        :class="{
+                          'bg-emerald-500/20 text-emerald-300 border-emerald-500/30': currentEvaluation.pathology_status === 'Healthy',
+                          'bg-amber-500/20 text-amber-300 border-amber-500/30': currentEvaluation.pathology_status === 'Suspect',
+                          'bg-red-500/20 text-red-300 border-red-500/30': currentEvaluation.pathology_status === 'Infected'
+                        }"
+                        class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border uppercase tracking-wider"
+                        x-text="currentEvaluation.pathology_status">
+                      </span>
+                    </div>
+                    <h3 class="text-xl font-extrabold text-white tracking-tight" x-text="currentEvaluation.primary_diagnosis"></h3>
+                    <p class="text-xs text-slate-300" x-text="currentEvaluation.recommended_intervention"></p>
+                  </div>
+
+                  <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-right">
+                    <span class="text-[10px] uppercase text-slate-400 block tracking-wider">Treatment Urgency</span>
+                    <span 
+                      :class="{
+                        'text-red-400 font-extrabold': currentEvaluation.treatment_urgency === 'Critical',
+                        'text-amber-400 font-bold': currentEvaluation.treatment_urgency === 'Monitor',
+                        'text-emerald-400 font-medium': currentEvaluation.treatment_urgency === 'None'
+                      }"
+                      class="text-base flex items-center gap-1 justify-end"
+                      x-text="currentEvaluation.treatment_urgency">
+                    </span>
+                    <span class="text-[10px] text-slate-500 block mt-1" x-text="'Confidence: ' + (currentEvaluation.confidence_score * 100).toFixed(0) + '%'"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Vector Severity Bar Visualizer -->
+              <div class="glass-panel rounded-2xl p-5 space-y-4">
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Diagnostic Vector Severity Spectrum</h4>
+                <div class="h-52 w-full relative">
+                  <canvas id="pathologyBarChart"></canvas>
+                </div>
+              </div>
+
+              <!-- Vector Indicators Breakdown -->
+              <div class="glass-panel rounded-2xl p-5 space-y-4">
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Pathogen & Stress Vector Indicators</h4>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
+                    <div class="flex justify-between text-xs font-semibold text-slate-200">
+                      <span>Fungal Pathogens</span>
+                      <span class="text-amber-400 font-mono" x-text="(currentEvaluation.diagnostics.fungal.leaf_spot_blight_score * 100).toFixed(0) + '%'"></span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Leaf spot, powdery mildew & rust rust spore index.</p>
+                  </div>
+
+                  <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
+                    <div class="flex justify-between text-xs font-semibold text-slate-200">
+                      <span>Bacterial & Viral</span>
+                      <span class="text-red-400 font-mono" x-text="(currentEvaluation.diagnostics.bacterial_viral.bacterial_blight_score * 100).toFixed(0) + '%'"></span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Bacterial blight or viral mosaic leaf distortion.</p>
+                  </div>
+
+                  <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
+                    <div class="flex justify-between text-xs font-semibold text-slate-200">
+                      <span>Insect / Pest Defoliation</span>
+                      <span class="text-teal-400 font-mono" x-text="(currentEvaluation.diagnostics.pest.chewing_defoliation_score * 100).toFixed(0) + '%'"></span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Chewing pest damage & chlorosis.</p>
+                  </div>
+
+                  <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
+                    <div class="flex justify-between text-xs font-semibold text-slate-200">
+                      <span>Nutritional / Heat Burn</span>
+                      <span class="text-brand-400 font-mono" x-text="(currentEvaluation.diagnostics.abiotic.nitrogen_phosphorus_deficiency_score * 100).toFixed(0) + '%'"></span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Nitrogen / Phosphorus deficiency & heat stress burn.</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </template>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Historical Scan Log Table -->
+    <div class="glass-panel rounded-2xl p-6 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 class="text-base font-bold text-white tracking-tight flex items-center gap-2">
+            <i class="fa-solid fa-clock-rotate-left text-brand-400"></i>
+            Historical Crop Evaluation Logs
+          </h3>
+          <p class="text-xs text-slate-400">Persistent log of processed crop specimens and field diagnostic passes</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <input 
+            type="text" 
+            x-model="searchQuery" 
+            placeholder="Filter Plot ID or Diagnosis..." 
+            class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500" 
+          />
+        </div>
+      </div>
+
+      <!-- Log Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-900/80 text-slate-400 uppercase tracking-wider text-[10px] font-semibold border-b border-slate-800">
+            <tr>
+              <th class="px-4 py-3">Timestamp</th>
+              <th class="px-4 py-3">Target Plot ID</th>
+              <th class="px-4 py-3">Mode</th>
+              <th class="px-4 py-3">Classification / Status</th>
+              <th class="px-4 py-3">Score / Primary Diagnosis</th>
+              <th class="px-4 py-3">Priority / Urgency</th>
+              <th class="px-4 py-3 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/60 font-mono">
+            <template x-for="(log, idx) in filteredLogs" :key="idx">
+              <tr class="hover:bg-slate-900/50 transition">
+                <td class="px-4 py-3 text-slate-400" x-text="log.timestamp"></td>
+                <td class="px-4 py-3 font-bold text-white" x-text="log.target_id"></td>
+                <td class="px-4 py-3">
+                  <span class="px-2 py-0.5 rounded text-[10px] uppercase font-sans font-semibold bg-slate-800 text-slate-300" x-text="log.mode"></span>
+                </td>
+                <td class="px-4 py-3 font-sans">
+                  <span 
+                    :class="{
+                      'text-emerald-400': log.status === 'Genetically Desirable' || log.status === 'Healthy',
+                      'text-amber-400': log.status === 'Standard' || log.status === 'Suspect',
+                      'text-red-400': log.status === 'Suboptimal' || log.status === 'Infected'
+                    }"
+                    class="font-semibold" x-text="log.status">
+                  </span>
+                </td>
+                <td class="px-4 py-3 font-sans text-slate-200" x-text="log.scoreOrDiagnosis"></td>
+                <td class="px-4 py-3 font-sans">
+                  <span 
+                    :class="{
+                      'bg-red-500/20 text-red-300': log.priority === 'High' || log.priority === 'Critical',
+                      'bg-amber-500/20 text-amber-300': log.priority === 'Medium' || log.priority === 'Monitor',
+                      'bg-emerald-500/20 text-emerald-300': log.priority === 'Low' || log.priority === 'None'
+                    }"
+                    class="px-2 py-0.5 rounded text-[10px] font-semibold"
+                    x-text="log.priority">
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-right font-sans">
+                  <button @click="loadLogResult(log)" class="text-brand-400 hover:text-brand-300 text-xs font-medium underline">
+                    Reload View
+                  </button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Application State & Script -->
+  <script>
+    let phenotypeChartInstance = null;
+    let pathologyChartInstance = null;
+
+    function cropDashboard() {
+      return {
+        activeTab: 'phenotype', // 'phenotype' or 'pathology'
+        isDragging: false,
+        isAnalyzing: false,
+        selectedImage: 'https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?auto=format&fit=crop&w=800&q=80',
+        
+        scansToday: 152,
+        avgScore: 0.82,
+        activeAlerts: 4,
+        searchQuery: '',
+
+        // Sample presets
+        samplePresets: [
+          {
+            name: "Maize Canopy",
+            tag: "Genetically Desirable",
+            url: "https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?auto=format&fit=crop&w=800&q=80"
+          },
+          {
+            name: "Soybean Leaf Rust",
+            tag: "Infected Pathology",
+            url: "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?auto=format&fit=crop&w=800&q=80"
+          },
+          {
+            name: "Wheat Cultivar",
+            tag: "Standard Variety",
+            url: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=800&q=80"
+          },
+          {
+            name: "Grape Vineyard",
+            tag: "High Yield Canopy",
+            url: "https://images.unsplash.com/photo-1592417817098-8f3d6ef23a28?auto=format&fit=crop&w=800&q=80"
+          }
+        ],
+
+        // Metadata Telemetry Form
+        telemetry: {
+          target_id: 'FIELD-NORTH-04',
+          ndvi_score: 0.62,
+          gps_lon: -121.4944,
+          gps_lat: 38.5815,
+          temperature_delta_c: 2.4,
+          soil_moisture_volumetric: 0.28
+        },
+
+        // Trait Preference Selection Criteria
+        preferences: {
+          min_leaf_angle: 0.70,
+          min_stalk_strength: 0.75,
+          min_pest_deterrence: 0.65,
+          target_classification: 'Genetically Desirable'
+        },
+
+        currentEvaluation: null,
+
+        logs: [
+          {
+            timestamp: '2026-10-29 14:22',
+            target_id: 'FIELD-NORTH-04',
+            mode: 'phenotype',
+            status: 'Genetically Desirable',
+            scoreOrDiagnosis: 'Phenotype Index: 0.86',
+            priority: 'High',
+            data: null
+          },
+          {
+            timestamp: '2026-10-29 12:05',
+            target_id: 'FIELD-SOUTH-02',
+            mode: 'pathology',
+            status: 'Infected',
+            scoreOrDiagnosis: 'Fungal Leaf Blight',
+            priority: 'Critical',
+            data: null
+          },
+          {
+            timestamp: '2026-10-28 16:40',
+            target_id: 'GREENHOUSE-01',
+            mode: 'phenotype',
+            status: 'Standard',
+            scoreOrDiagnosis: 'Phenotype Index: 0.68',
+            priority: 'Medium',
+            data: null
+          }
+        ],
+
+        init() {
+          this.runEvaluation();
+        },
+
+        switchTab(tab) {
+          this.activeTab = tab;
+          this.runEvaluation();
+        },
+
+        loadSample(sample) {
+          this.selectedImage = sample.url;
+        },
+
+        handleFileSelect(event) {
+          const file = event.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              this.selectedImage = e.target.result;
+            };
+            reader.readAsDataURL(file);
+          }
+        },
+
+        handleDrop(event) {
+          this.isDragging = false;
+          const file = event.dataTransfer.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              this.selectedImage = e.target.result;
+            };
+            reader.readAsDataURL(file);
+          }
+        },
+
+        resetForm() {
+          this.selectedImage = this.samplePresets[0].url;
+          this.telemetry.target_id = 'FIELD-' + Math.floor(100 + Math.random() * 900);
+          this.currentEvaluation = null;
+        },
+
+        // API base URL — change to your Nebius endpoint in production
+        apiBase: 'http://localhost:8000',
+
+        async runEvaluation() {
+          this.isAnalyzing = true;
+
+          const payload = {
+            image_url: this.selectedImage,
+            metadata: {
+              target_id: this.telemetry.target_id,
+              gps_coordinates: [this.telemetry.gps_lon, this.telemetry.gps_lat],
+              ndvi_score: this.telemetry.ndvi_score,
+              temperature_delta_c: this.telemetry.temperature_delta_c,
+              soil_moisture_volumetric: this.telemetry.soil_moisture_volumetric,
+            },
+          };
+
+          if (this.activeTab === 'phenotype') {
+            payload.user_preferences = {
+              target_classification: this.preferences.target_classification,
+              priority_level: 'High',
+              target_thresholds: {
+                '1_plant_architecture_and_morphology': {
+                  erect_leaf_angle_score: this.preferences.min_leaf_angle,
+                  stalk_strength_and_diameter_score: this.preferences.min_stalk_strength,
+                },
+                '3_biotic_stress_resistance': {
+                  pest_deterrence_score: this.preferences.min_pest_deterrence,
+                },
+              },
+            };
+          }
+
+          const endpoint = this.activeTab === 'phenotype'
+            ? '/api/v1/evaluate/phenotype'
+            : '/api/v1/evaluate/diagnostics';
+
+          try {
+            const response = await fetch(this.apiBase + endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) throw new Error(`API error: ${response.status}`);
+            const data = await response.json();
+
+            if (this.activeTab === 'phenotype') {
+              this.handlePhenotypeResponse(data);
+            } else {
+              this.handlePathologyResponse(data);
+            }
+          } catch (err) {
+            console.warn('API call failed, using fallback mock data:', err.message);
+            this.runMockEvaluation();
+          }
+
+          this.scansToday++;
+          this.isAnalyzing = false;
+        },
+
+        handlePhenotypeResponse(data) {
+          const ai = data.ai_evaluation;
+          const cats = ai.judging_categories;
+          const filtering = data.preference_filtering;
+
+          const preferenceApproved = filtering ? filtering.selection_approved : false;
+
+          this.currentEvaluation = {
+            mode: 'phenotype',
+            target_id: ai.target_id,
+            classification: ai.classification,
+            overall_phenotypic_score: ai.overall_phenotypic_score,
+            collector_queue_priority: ai.collector_queue_priority,
+            preference_approved: preferenceApproved,
+            recommended_action: ai.recommended_action,
+            categories: {
+              arch: cats['1_plant_architecture_and_morphology'],
+              yield: cats['2_yield_and_reproductive_traits'],
+              biotic: cats['3_biotic_stress_resistance'],
+              abiotic: cats['4_abiotic_stress_resilience'],
+              quality: cats['5_quality_phenology_and_post_harvest'],
+              harvest: cats['6_harvest_and_processing_suitability'],
+            },
+          };
+
+          this.logs.unshift({
+            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16),
+            target_id: ai.target_id,
+            mode: 'phenotype',
+            status: ai.classification,
+            scoreOrDiagnosis: `Phenotype Index: ${ai.overall_phenotypic_score.toFixed(2)}`,
+            priority: ai.collector_queue_priority,
+            data: JSON.parse(JSON.stringify(this.currentEvaluation)),
+          });
+
+          this.$nextTick(() => {
+            const c = this.currentEvaluation.categories;
+            this.renderPhenotypeRadarChart([
+              c.arch.erect_leaf_angle_score,
+              c.yield.harvest_index_estimate,
+              c.biotic.pest_deterrence_score,
+              c.abiotic.stomatal_regulation_leaf_rolling_score,
+              c.quality.synchronous_flowering_ripening_score,
+              c.harvest.non_shattering_seed_pods_score,
+            ]);
+          });
+        },
+
+        handlePathologyResponse(data) {
+          const ai = data.ai_evaluation;
+          const cats = ai.diagnostic_categories;
+
+          this.currentEvaluation = {
+            mode: 'pathology',
+            target_id: ai.target_id,
+            pathology_status: ai.pathology_status,
+            primary_diagnosis: ai.primary_diagnosis,
+            confidence_score: ai.confidence_score,
+            treatment_urgency: ai.treatment_urgency,
+            recommended_intervention: ai.recommended_action,
+            diagnostics: {
+              fungal: cats['1_fungal_pathogens'],
+              bacterial_viral: cats['2_bacterial_and_viral_infections'],
+              pest: cats['3_pest_and_insect_damage'],
+              abiotic: cats['4_abiotic_and_nutritional_stress'],
+            },
+          };
+
+          this.logs.unshift({
+            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16),
+            target_id: ai.target_id,
+            mode: 'pathology',
+            status: ai.pathology_status,
+            scoreOrDiagnosis: ai.primary_diagnosis,
+            priority: ai.treatment_urgency,
+            data: JSON.parse(JSON.stringify(this.currentEvaluation)),
+          });
+
+          this.$nextTick(() => {
+            const d = this.currentEvaluation.diagnostics;
+            this.renderPathologyBarChart([
+              d.fungal.leaf_spot_blight_score,
+              d.bacterial_viral.bacterial_blight_score,
+              d.pest.chewing_defoliation_score,
+              d.abiotic.nitrogen_phosphorus_deficiency_score,
+            ]);
+          });
+        },
+
+        runMockEvaluation() {
+          // Fallback mock data when API is unavailable
+          if (this.activeTab === 'phenotype') {
+            const leafAngle = 0.65 + Math.random() * 0.3;
+            const stalkStrength = 0.70 + Math.random() * 0.25;
+            const pestDeterrence = 0.60 + Math.random() * 0.35;
+            const yieldIndex = 0.75 + Math.random() * 0.20;
+            const abioticResilience = 0.72 + Math.random() * 0.22;
+            const harvestSuitability = 0.80 + Math.random() * 0.15;
+            const overallScore = (leafAngle + stalkStrength + pestDeterrence + yieldIndex + abioticResilience + harvestSuitability) / 6;
+            const classification = overallScore > 0.80 ? 'Genetically Desirable' : (overallScore > 0.65 ? 'Standard' : 'Suboptimal');
+
+            this.currentEvaluation = {
+              mode: 'phenotype', target_id: this.telemetry.target_id, classification,
+              overall_phenotypic_score: overallScore,
+              collector_queue_priority: overallScore > 0.80 ? 'High' : 'Medium',
+              preference_approved: classification === this.preferences.target_classification,
+              recommended_action: 'Mock evaluation — connect API for real inference.',
+              categories: {
+                arch: { erect_leaf_angle_score: leafAngle, stalk_strength_and_diameter_score: stalkStrength, root_system_architecture_score: 0.82, branching_habit: 'Erect Canopy' },
+                yield: { harvest_index_estimate: yieldIndex, kernel_fruit_density_count: 420, fertility_efficiency_score: 0.88 },
+                biotic: { necrotic_chlorotic_threshold_score: 0.12, pest_deterrence_score: pestDeterrence },
+                abiotic: { stomatal_regulation_leaf_rolling_score: abioticResilience, stay_green_trait_active: true },
+                quality: { synchronous_flowering_ripening_score: 0.84 },
+                harvest: { non_shattering_seed_pods_score: harvestSuitability, detachment_force_score: 0.78 },
+              },
+            };
+            this.logs.unshift({ timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16), target_id: this.telemetry.target_id, mode: 'phenotype', status: classification, scoreOrDiagnosis: `Phenotype Index: ${overallScore.toFixed(2)}`, priority: this.currentEvaluation.collector_queue_priority, data: JSON.parse(JSON.stringify(this.currentEvaluation)) });
+            this.$nextTick(() => { this.renderPhenotypeRadarChart([leafAngle, yieldIndex, pestDeterrence, abioticResilience, 0.84, harvestSuitability]); });
+          } else {
+            const isHealthy = this.selectedImage.includes('photo-1530595467537') || this.selectedImage.includes('photo-1592417817098');
+            this.currentEvaluation = {
+              mode: 'pathology', target_id: this.telemetry.target_id,
+              pathology_status: isHealthy ? 'Healthy' : 'Infected',
+              primary_diagnosis: isHealthy ? 'No Pathogens Detected - Healthy Foliage' : 'Fungal Leaf Spot (Bipolaris) & Severe Nitrogen Chlorosis',
+              confidence_score: 0.95, treatment_urgency: isHealthy ? 'None' : 'Critical',
+              recommended_intervention: 'Mock evaluation — connect API for real inference.',
+              diagnostics: {
+                fungal: { leaf_spot_blight_score: isHealthy ? 0.05 : 0.82 },
+                bacterial_viral: { bacterial_blight_score: isHealthy ? 0.02 : 0.88 },
+                pest: { chewing_defoliation_score: isHealthy ? 0.08 : 0.45 },
+                abiotic: { nitrogen_phosphorus_deficiency_score: isHealthy ? 0.10 : 0.65 },
+              },
+            };
+            this.logs.unshift({ timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16), target_id: this.telemetry.target_id, mode: 'pathology', status: this.currentEvaluation.pathology_status, scoreOrDiagnosis: this.currentEvaluation.primary_diagnosis, priority: this.currentEvaluation.treatment_urgency, data: JSON.parse(JSON.stringify(this.currentEvaluation)) });
+            this.$nextTick(() => { const d = this.currentEvaluation.diagnostics; this.renderPathologyBarChart([d.fungal.leaf_spot_blight_score, d.bacterial_viral.bacterial_blight_score, d.pest.chewing_defoliation_score, d.abiotic.nitrogen_phosphorus_deficiency_score]); });
+          }
+        },
+
+        renderPhenotypeRadarChart(dataPoints) {
+          const ctx = document.getElementById('phenotypeRadarChart');
+          if (!ctx) return;
+
+          if (phenotypeChartInstance) {
+            phenotypeChartInstance.destroy();
+          }
+
+          phenotypeChartInstance = new Chart(ctx, {
+            type: 'radar',
+            data: {
+              labels: [
+                'Architecture',
+                'Yield Potential',
+                'Biotic Resistance',
+                'Abiotic Resilience',
+                'Quality & Phenology',
+                'Harvest Suitability'
+              ],
+              datasets: [{
+                label: 'Candidate Score',
+                data: dataPoints,
+                fill: true,
+                backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                borderColor: '#22c55e',
+                pointBackgroundColor: '#4ade80',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: '#22c55e'
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                r: {
+                  angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                  grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                  pointLabels: { color: '#94a3b8', font: { size: 10 } },
+                  ticks: { display: false },
+                  min: 0,
+                  max: 1
+                }
+              },
+              plugins: {
+                legend: { display: false }
+              }
+            }
+          });
+        },
+
+        renderPathologyBarChart(dataPoints) {
+          const ctx = document.getElementById('pathologyBarChart');
+          if (!ctx) return;
+
+          if (pathologyChartInstance) {
+            pathologyChartInstance.destroy();
+          }
+
+          pathologyChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: ['Fungal Spores', 'Bacterial/Viral', 'Pest Defoliation', 'Nutrient Deficiency'],
+              datasets: [{
+                label: 'Severity Index',
+                data: dataPoints,
+                backgroundColor: [
+                  'rgba(245, 158, 11, 0.7)',
+                  'rgba(239, 68, 68, 0.7)',
+                  'rgba(20, 184, 166, 0.7)',
+                  'rgba(34, 197, 94, 0.7)'
+                ],
+                borderRadius: 6
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  max: 1,
+                  grid: { color: 'rgba(255, 255, 255, 0.08)' },
+                  ticks: { color: '#94a3b8', font: { size: 10 } }
+                },
+                x: {
+                  grid: { display: false },
+                  ticks: { color: '#94a3b8', font: { size: 10 } }
+                }
+              },
+              plugins: {
+                legend: { display: false }
+              }
+            }
+          });
+        },
+
+        loadLogResult(log) {
+          if (log.data) {
+            this.activeTab = log.mode;
+            this.currentEvaluation = log.data;
+            this.$nextTick(() => {
+              if (log.mode === 'phenotype') {
+                const cat = log.data.categories;
+                this.renderPhenotypeRadarChart([
+                  cat.arch.erect_leaf_angle_score,
+                  cat.yield.harvest_index_estimate,
+                  cat.biotic.pest_deterrence_score,
+                  cat.abiotic.stomatal_regulation_leaf_rolling_score,
+                  cat.quality.synchronous_flowering_ripening_score,
+                  cat.harvest.non_shattering_seed_pods_score
+                ]);
+              } else {
+                const diag = log.data.diagnostics;
+                this.renderPathologyBarChart([
+                  diag.fungal.leaf_spot_blight_score,
+                  diag.bacterial_viral.bacterial_blight_score,
+                  diag.pest.chewing_defoliation_score,
+                  diag.abiotic.nitrogen_phosphorus_deficiency_score
+                ]);
+              }
+            });
+          }
+        },
+
+        get filteredLogs() {
+          if (!this.searchQuery) return this.logs;
+          const query = this.searchQuery.toLowerCase();
+          return this.logs.filter(log => 
+            log.target_id.toLowerCase().includes(query) || 
+            log.status.toLowerCase().includes(query) ||
+            log.mode.toLowerCase().includes(query)
+          );
+        }
+      }
+    }
+  </script>
+</body>
+</html>

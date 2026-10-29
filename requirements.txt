@@ -17,6 +17,9 @@ numpy>=1.26.0
 # cosmos-transfer2
 # diffusers>=0.30.0
 
+# VLM inference via Nebius AI Studio (OpenAI-compatible API)
+openai>=1.40.0
+
 # Evaluation sweep
 scipy>=1.14.0
 
